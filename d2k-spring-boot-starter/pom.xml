@@ -6,7 +6,7 @@
 
     <groupId>io.github.xiajuan96</groupId>
     <artifactId>d2k-spring-boot-starter</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.0</version>
     <packaging>jar</packaging>
     <name>d2k-spring-boot-starter</name>
     <description>Spring Boot Starter for D2K delayed message system</description>
@@ -25,6 +25,12 @@
             <name>xiajuan96</name>
         </developer>
     </developers>
+
+    <scm>
+        <connection>scm:git:git://github.com/xiajuan96/d2k-spring-boot.git</connection>
+        <developerConnection>scm:git:ssh://github.com:xiajuan96/d2k-spring-boot.git</developerConnection>
+        <url>https://github.com/xiajuan96/d2k-spring-boot/tree/main</url>
+    </scm>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
@@ -139,6 +145,42 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>${maven.gpg.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+                <version>0.4.0</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <publishingServerId>central</publishingServerId>
+                    <tokenAuth>true</tokenAuth>
+                    <autoPublish>true</autoPublish>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
+
+    <distributionManagement>
+        <snapshotRepository>
+            <id>ossrh</id>
+            <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+        <repository>
+            <id>ossrh</id>
+            <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+    </distributionManagement>
 </project>

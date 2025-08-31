@@ -7,7 +7,7 @@
     <parent>
         <groupId>io.github.xiajuan96</groupId>
         <artifactId>d2k-spring-boot-starter-example</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <version>1.0.0</version>
     </parent>
 
     <artifactId>order-timeout-example</artifactId>

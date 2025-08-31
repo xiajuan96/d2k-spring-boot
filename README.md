@@ -37,7 +37,7 @@ D2K Spring Boot Starter 是基于 [d2k-client](https://github.com/xiajuan96/d2k-
 <dependency>
     <groupId>io.github.xiajuan96</groupId>
     <artifactId>d2k-spring-boot-starter</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.0</version>
 </dependency>
 ```
 

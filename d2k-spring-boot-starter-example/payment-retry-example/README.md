@@ -41,7 +41,7 @@ mvn spring-boot:run
 
 # 或者先编译再运行
 mvn clean package
-java -jar target/payment-retry-example-1.0.0-SNAPSHOT.jar
+java -jar target/payment-retry-example-1.0.0.jar
 ```
 
 应用启动后访问：http://localhost:8082/payment-retry

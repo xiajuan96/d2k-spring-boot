@@ -60,7 +60,7 @@ mvn spring-boot:run
 
 # 或者使用 jar 包运行
 mvn clean package
-java -jar target/monitoring-example-1.0.0-SNAPSHOT.jar
+java -jar target/monitoring-example-1.0.0.jar
 ```
 
 应用启动后，访问以下地址：

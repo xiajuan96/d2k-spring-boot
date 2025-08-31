@@ -6,7 +6,7 @@
 
     <groupId>io.github.xiajuan96</groupId>
     <artifactId>d2k-spring-boot-starter-example</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.0</version>
     <packaging>pom</packaging>
     <name>d2k-spring-boot-starter-example</name>
     <description>Examples for D2K Spring Boot Starter</description>
@@ -26,7 +26,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <spring-boot.version>2.7.18</spring-boot.version>
-        <d2k-spring-boot-starter.version>1.0.0-SNAPSHOT</d2k-spring-boot-starter.version>
+        <d2k-spring-boot-starter.version>1.0.0</d2k-spring-boot-starter.version>
     </properties>
 
     <modules>
