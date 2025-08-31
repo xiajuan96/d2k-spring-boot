@@ -1,0 +1,252 @@
+# 性能优化示例配置文件
+spring:
+  application:
+    name: performance-optimization-example
+  
+  # 数据库配置（H2内存数据库）
+  datasource:
+    url: jdbc:h2:mem:performance_db
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  
+  # JPA配置
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+  
+  # H2控制台配置
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  
+  # Redis配置
+  redis:
+    host: localhost
+    port: 6379
+    timeout: 2000ms
+    lettuce:
+      pool:
+        max-active: 20
+        max-idle: 10
+        min-idle: 5
+        max-wait: 2000ms
+  
+  # 服务器配置
+  server:
+    port: 8080
+    servlet:
+      context-path: /performance
+
+# D2K配置
+d2k:
+  # 生产者配置
+  producer:
+    bootstrap-servers: localhost:9092
+    key-serializer: org.apache.kafka.common.serialization.StringSerializer
+    value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    # 性能优化配置
+    batch-size: 16384
+    linger-ms: 10
+    buffer-memory: 33554432
+    compression-type: lz4
+    acks: 1
+    retries: 3
+    max-in-flight-requests-per-connection: 5
+    enable-idempotence: true
+    request-timeout-ms: 30000
+    delivery-timeout-ms: 120000
+  
+  # 消费者配置
+  consumer:
+    bootstrap-servers: localhost:9092
+    group-id: performance-optimization-group
+    key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+    # 性能优化配置
+    fetch-min-bytes: 1024
+    fetch-max-wait: 500
+    max-poll-records: 500
+    session-timeout-ms: 30000
+    heartbeat-interval-ms: 3000
+    enable-auto-commit: false
+    auto-offset-reset: earliest
+    properties:
+      spring.json.trusted.packages: "*"
+      spring.json.use.type.info.headers: false
+      spring.json.value.default.type: java.lang.Object
+  
+  # 异步配置
+  async:
+    enabled: true
+    core-pool-size: 10
+    max-pool-size: 20
+    queue-capacity: 1000
+    keep-alive-seconds: 60
+    thread-name-prefix: "d2k-async-"
+  
+  # 并发配置
+  concurrency:
+    consumer: 3
+    producer: 2
+  
+  # 重试配置
+  retry:
+    enabled: true
+    max-attempts: 3
+    backoff-delay: 1000
+    max-delay: 10000
+    multiplier: 2.0
+
+# 管理端点配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+    metrics:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      percentiles:
+        http.server.requests: 0.5,0.9,0.95,0.99
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    example.d2k.performance: DEBUG
+    org.springframework.kafka: INFO
+    org.apache.kafka: WARN
+    org.springframework.data.redis: INFO
+    io.micrometer: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%logger{36}] - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%logger{36}] - %msg%n"
+  file:
+    name: logs/performance-optimization.log
+    max-size: 100MB
+    max-history: 30
+
+# 自定义性能优化配置
+app:
+  performance:
+    # 监控配置
+    monitoring:
+      enabled: true
+      metrics-interval: 30000  # 指标收集间隔（毫秒）
+      retention-hours: 24      # 指标保留时间（小时）
+      detailed-logging: false  # 是否启用详细日志
+    
+    # 告警配置
+    alert:
+      enabled: true
+      throughput-threshold: 100      # 吞吐量告警阈值（msg/s）
+      latency-threshold: 1000        # 延迟告警阈值（毫秒）
+      error-rate-threshold: 0.05     # 错误率告警阈值（5%）
+      memory-threshold: 0.9          # 内存使用率告警阈值（90%）
+    
+    # 生产者性能配置
+    producer:
+      batch-size: 16384              # 批处理大小
+      linger-ms: 10                  # 批处理等待时间
+      buffer-memory: 33554432        # 缓冲区内存大小
+      compression-type: lz4          # 压缩类型
+      acks: 1                        # 确认模式
+      retries: 3                     # 重试次数
+      max-in-flight: 5               # 最大飞行请求数
+    
+    # 消费者性能配置
+    consumer:
+      fetch-min-bytes: 1024          # 最小拉取字节数
+      fetch-max-wait: 500            # 最大等待时间
+      max-poll-records: 500          # 最大拉取记录数
+      session-timeout: 30000         # 会话超时时间
+      heartbeat-interval: 3000       # 心跳间隔
+      concurrency: 3                 # 并发消费者数量
+    
+    # 线程池配置
+    threadpool:
+      core-size: 10                  # 核心线程数
+      max-size: 20                   # 最大线程数
+      queue-capacity: 1000           # 队列容量
+      keep-alive: 60                 # 线程保活时间（秒）
+    
+    # 缓存配置
+    cache:
+      maximum-size: 10000            # 最大缓存条目数
+      expire-after-write: 300        # 写入后过期时间（秒）
+      expire-after-access: 600       # 访问后过期时间（秒）
+    
+    # 测试配置
+    test:
+      default-topic: performance-test
+      batch-size: 100
+      message-size: 1024
+    
+    # 业务规则配置
+    business:
+      # 高优先级消息配置
+      high-priority:
+        topics:
+          - urgent-orders
+          - critical-alerts
+        max-processing-time: 5000
+        dedicated-threads: 2
+      
+      # 批量处理配置
+      batch-processing:
+        enabled: true
+        batch-size: 100
+        timeout: 5000
+        topics:
+          - batch-notifications
+          - bulk-updates
+      
+      # 消息类型特定配置
+      message-types:
+        order:
+          timeout: 30000
+          retry-attempts: 5
+          priority: high
+        notification:
+          timeout: 10000
+          retry-attempts: 3
+          priority: normal
+        analytics:
+          timeout: 60000
+          retry-attempts: 1
+          priority: low
+    
+    # 通知配置
+    notification:
+      enabled: true
+      channels:
+        - email
+        - webhook
+      email:
+        enabled: false
+        smtp-host: smtp.example.com
+        smtp-port: 587
+        username: alerts@example.com
+        password: password
+        to: admin@example.com
+      webhook:
+        enabled: true
+        url: http://localhost:8080/performance/api/alerts/webhook
+        timeout: 5000
+        retry-attempts: 3

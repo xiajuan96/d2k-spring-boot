@@ -1,0 +1,107 @@
+# 订单超时处理示例应用配置
+spring:
+  application:
+    name: order-timeout-example
+  
+  # 数据源配置 - 使用H2内存数据库
+  datasource:
+    url: jdbc:h2:mem:order_timeout_db;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  
+  # JPA配置
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+  
+  # H2控制台配置
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+      settings:
+        web-allow-others: true
+
+# 服务器配置
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+# D2K配置
+d2k:
+  # 生产者配置
+  producer:
+    bootstrap-servers: localhost:9092
+    key-serializer: org.apache.kafka.common.serialization.StringSerializer
+    value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    # 性能优化配置
+    acks: 1
+    retries: 3
+    batch-size: 16384
+    linger-ms: 5
+    buffer-memory: 33554432
+    # 延迟消息配置
+    delay-topic-suffix: "-delay"
+    # Topic延迟时间配置（毫秒）
+    topic-delays:
+      order-timeout: 1800000  # 30分钟默认延迟时间
+    
+  # 消费者配置
+  consumer:
+    bootstrap-servers: localhost:9092
+    key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    # 消费者组配置
+    group-id: order-timeout-consumer-group
+    client-id: order-timeout-consumer
+    # 性能配置
+    session-timeout-ms: 30000
+    heartbeat-interval-ms: 3000
+    max-poll-records: 100
+    # 并发配置
+    concurrency: 3
+    # 异步处理配置
+    async-processing: true
+    async-core-pool-size: 2
+    async-max-pool-size: 5
+    async-queue-capacity: 100
+    async-keep-alive-seconds: 60
+
+# 管理端点配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  health:
+    kafka:
+      enabled: true
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    example.d2k.order.timeout: DEBUG
+    com.d2k: DEBUG
+    org.springframework.boot: INFO
+    org.springframework.web: INFO
+    org.apache.kafka: WARN
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%logger{36}] - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%logger{36}] - %msg%n"
+  file:
+    name: logs/order-timeout-example.log
+    max-size: 10MB
+    max-history: 30

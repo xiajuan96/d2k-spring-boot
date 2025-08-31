@@ -1,0 +1,136 @@
+# 支付结果异步通知重试示例配置
+spring:
+  application:
+    name: payment-retry-example
+  
+  # H2 内存数据库配置
+  datasource:
+    url: jdbc:h2:mem:payment_retry_db;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  
+  # JPA 配置
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+    defer-datasource-initialization: true
+  
+  # H2 控制台配置
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+      settings:
+        web-allow-others: true
+
+# 服务器配置
+server:
+  port: 8082
+  servlet:
+    context-path: /payment-retry
+
+# D2K 配置
+d2k:
+  # 生产者配置
+  producer:
+    bootstrap-servers: localhost:9092
+    key-serializer: org.apache.kafka.common.serialization.StringSerializer
+    value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    # 性能优化配置
+    acks: 1
+    retries: 3
+    batch-size: 16384
+    linger-ms: 5
+    buffer-memory: 33554432
+    # 延迟消息配置
+    enable-delay: true
+    delay-topic-prefix: "d2k-delay"
+    delay-topic-partitions: 3
+    delay-topic-replication-factor: 1
+    # Topic延迟时间配置（毫秒）
+    topic-delays:
+      payment-notification-retry: 30000  # 30秒默认延迟时间
+      payment-status-change: 60000       # 1分钟默认延迟时间
+      payment-batch-retry: 120000        # 2分钟默认延迟时间
+  
+  # 消费者配置
+  consumer:
+    bootstrap-servers: localhost:9092
+    key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    # 消费者组配置
+    group-id: payment-retry-default-group
+    client-id: payment-retry-default-client
+    # 性能优化配置
+    auto-offset-reset: latest
+    enable-auto-commit: false
+    max-poll-records: 100
+    max-poll-interval-ms: 300000
+    session-timeout-ms: 30000
+    heartbeat-interval-ms: 3000
+    fetch-min-bytes: 1
+    fetch-max-wait-ms: 500
+    # 并发和异步处理配置
+    concurrency: 3
+    async: true
+    # 重试配置
+    enable-retry: true
+    max-retry-attempts: 3
+    retry-backoff-ms: 1000
+
+# 管理端点配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  health:
+    defaults:
+      enabled: true
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    example.d2k.payment.retry: DEBUG
+    com.d2k: DEBUG
+    org.springframework.kafka: INFO
+    org.apache.kafka: WARN
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%logger{36}] - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%logger{36}] - %msg%n"
+  file:
+    name: logs/payment-retry-example.log
+    max-size: 10MB
+    max-history: 30
+
+# 自定义配置
+payment:
+  retry:
+    # 重试间隔配置（秒）
+    intervals: [30, 60, 300, 900, 1800]  # 30s, 1m, 5m, 15m, 30m
+    # 默认最大重试次数
+    max-attempts: 5
+    # HTTP 回调超时时间（秒）
+    callback-timeout: 30
+    # 批量处理大小
+    batch-size: 50
+  
+  notification:
+    # 通知状态检查间隔（分钟）
+    status-check-interval: 5
+    # 失败通知保留天数
+    failed-retention-days: 30
+    # 成功通知保留天数
+    success-retention-days: 7

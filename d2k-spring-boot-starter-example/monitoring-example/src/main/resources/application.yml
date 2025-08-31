@@ -1,0 +1,415 @@
+# 监控示例应用配置
+spring:
+  application:
+    name: monitoring-example
+  
+  # 数据库配置（H2内存数据库）
+  datasource:
+    url: jdbc:h2:mem:monitoring_db
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  
+  # JPA配置
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+  
+  # H2控制台配置
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  
+  # Redis配置
+  redis:
+    host: localhost
+    port: 6379
+    timeout: 2000ms
+    lettuce:
+      pool:
+        max-active: 20
+        max-idle: 10
+        min-idle: 5
+        max-wait: 2000ms
+
+# 服务器配置
+server:
+  port: 8080
+  servlet:
+    context-path: /monitoring
+
+# D2K配置
+d2k:
+  # 生产者配置
+  producer:
+    bootstrap-servers: localhost:9092
+    key-serializer: org.apache.kafka.common.serialization.StringSerializer
+    value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    # 性能优化配置
+    batch-size: 16384
+    linger-ms: 10
+    buffer-memory: 33554432
+    compression-type: lz4
+    acks: 1
+    retries: 3
+    retry-backoff-ms: 100
+    request-timeout-ms: 30000
+    delivery-timeout-ms: 120000
+    max-in-flight-requests-per-connection: 5
+    enable-idempotence: true
+  
+  # 消费者配置
+  consumer:
+    bootstrap-servers: localhost:9092
+    group-id: monitoring-example-group
+    key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    # 性能优化配置
+    fetch-min-bytes: 1024
+    fetch-max-wait: 500
+    max-poll-records: 500
+    max-poll-interval-ms: 300000
+    session-timeout-ms: 30000
+    heartbeat-interval-ms: 3000
+    auto-offset-reset: latest
+    enable-auto-commit: true
+    auto-commit-interval-ms: 5000
+  
+  # 异步配置
+  async:
+    enabled: true
+    core-pool-size: 10
+    max-pool-size: 50
+    queue-capacity: 200
+    keep-alive-seconds: 60
+    thread-name-prefix: d2k-async-
+  
+  # 并发配置
+  concurrency:
+    enabled: true
+    min: 3
+    max: 10
+  
+  # 重试配置
+  retry:
+    enabled: true
+    max-attempts: 3
+    backoff-delay: 1000
+    max-delay: 10000
+    multiplier: 2.0
+
+# Actuator配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus,info,env,configprops,beans,mappings
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+    metrics:
+      enabled: true
+    prometheus:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+        kafka.consumer.fetch.latency: true
+        kafka.producer.record.send.latency: true
+      percentiles:
+        http.server.requests: 0.5,0.9,0.95,0.99
+        kafka.consumer.fetch.latency: 0.5,0.9,0.95,0.99
+        kafka.producer.record.send.latency: 0.5,0.9,0.95,0.99
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    example.d2k.monitoring: DEBUG
+    org.springframework.kafka: WARN
+    org.apache.kafka: WARN
+    org.springframework.data.redis: WARN
+    io.micrometer: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%logger{36}] - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%logger{36}] - %msg%n"
+
+# 自定义监控配置
+app:
+  monitoring:
+    # 实例配置
+    instance-id: ${spring.application.name}-${random.uuid}
+    node-id: ${HOSTNAME:localhost}
+    environment: ${SPRING_PROFILES_ACTIVE:dev}
+    
+    # 指标收集配置
+    metrics:
+      enabled: true
+      collection-interval: 60  # 秒
+      retention-hours: 24
+      batch-size: 100
+      
+    # 告警配置
+    alert:
+      enabled: true
+      check-interval: 30  # 秒
+      
+      # 告警阈值
+      thresholds:
+        # Kafka告警阈值
+        kafka-error-rate: 0.05  # 5%错误率
+        kafka-latency: 5000     # 5秒延迟
+        
+        # 系统资源告警阈值
+        cpu-usage: 0.8          # 80%CPU使用率
+        memory-usage: 0.8       # 80%内存使用率
+        heap-usage: 0.8         # 80%堆内存使用率
+        
+        # HTTP告警阈值
+        http-error-rate: 0.05   # 5%错误率
+        http-response-time: 5000 # 5秒响应时间
+        
+        # 线程告警阈值
+        thread-count: 200       # 200个线程
+        
+        # 连接池告警阈值
+        db-connection-usage: 0.8  # 80%数据库连接使用率
+        redis-connection-usage: 0.8 # 80%Redis连接使用率
+        
+        # 缓存告警阈值
+        cache-hit-rate: 0.8     # 80%缓存命中率
+        cache-eviction-rate: 0.1 # 10%缓存逐出率
+      
+      # 告警抑制配置
+      suppression:
+        enabled: true
+        duration: 300  # 5分钟内相同告警不重复发送
+        
+      # 告警升级配置
+      escalation:
+        enabled: true
+        levels:
+          - level: WARNING
+            duration: 600  # 10分钟后升级
+          - level: ERROR
+            duration: 1800 # 30分钟后升级
+          - level: CRITICAL
+            duration: 3600 # 1小时后升级
+    
+    # 缓存配置
+    cache:
+      max-size: 10000
+      expire-after-write: 300  # 秒
+      expire-after-access: 600 # 秒
+      record-stats: true
+      
+    # 线程池配置
+    thread-pool:
+      core-size: 5
+      max-size: 20
+      queue-capacity: 100
+      keep-alive: 60  # 秒
+      
+    # 健康检查配置
+    health:
+      enabled: true
+      check-interval: 30  # 秒
+      timeout: 5000      # 毫秒
+      
+      # 健康检查项配置
+      checks:
+        database:
+          enabled: true
+          timeout: 3000
+        redis:
+          enabled: true
+          timeout: 2000
+        kafka:
+          enabled: true
+          timeout: 5000
+        system:
+          enabled: true
+          cpu-threshold: 0.9
+          memory-threshold: 0.9
+    
+    # 通知配置
+    notification:
+      # 邮件通知
+      email:
+        enabled: false
+        host: smtp.gmail.com
+        port: 587
+        username: 
+        password: 
+        from: monitoring@example.com
+        to:
+          - admin@example.com
+          - ops@example.com
+        subject-prefix: "[监控告警]"
+        
+      # Webhook通知
+      webhook:
+        enabled: false
+        url: http://localhost:8080/webhook/alert
+        timeout: 5000  # 毫秒
+        retries: 3
+        headers:
+          Content-Type: application/json
+          Authorization: Bearer your-token
+          
+      # 钉钉通知
+      dingtalk:
+        enabled: false
+        webhook-url: 
+        secret: 
+        
+      # 企业微信通知
+      wechat:
+        enabled: false
+        webhook-url: 
+        
+    # 性能测试配置
+    test:
+      kafka:
+        default-topic: monitoring-test-topic
+        batch-sizes: [1, 10, 100, 1000]
+        message-sizes: [100, 1024, 10240]  # 字节
+        
+      redis:
+        key-prefix: "monitoring:test:"
+        value-sizes: [100, 1024, 10240]  # 字节
+        
+      cache:
+        key-prefix: "cache:test:"
+        sizes: [100, 1000, 10000]
+        
+      http:
+        endpoints:
+          - /api/monitoring/overview
+          - /api/monitoring/health
+          - /api/monitoring/metrics
+        concurrent-users: [1, 5, 10, 20]
+        
+    # 数据存储配置
+    storage:
+      # 数据库存储
+      database:
+        enabled: true
+        batch-size: 100
+        flush-interval: 60  # 秒
+        
+      # Redis存储
+      redis:
+        enabled: true
+        key-prefix: "monitoring:"
+        ttl: 86400  # 24小时，秒
+        
+      # 文件存储
+      file:
+        enabled: false
+        path: ./monitoring-data
+        format: json
+        rotation:
+          enabled: true
+          max-size: 100MB
+          max-files: 10
+          
+    # 报表配置
+    report:
+      enabled: true
+      schedule:
+        daily: "0 0 8 * * ?"    # 每天8点
+        weekly: "0 0 8 ? * MON" # 每周一8点
+        monthly: "0 0 8 1 * ?"  # 每月1号8点
+      
+      # 报表内容
+      content:
+        include-charts: true
+        include-trends: true
+        include-alerts: true
+        include-recommendations: true
+        
+      # 报表分发
+      distribution:
+        email:
+          enabled: false
+          recipients:
+            - report@example.com
+        file:
+          enabled: true
+          path: ./reports
+          format: pdf
+
+# 开发环境特定配置
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+      
+app:
+  monitoring:
+    alert:
+      enabled: true
+      # 开发环境降低告警阈值便于测试
+      thresholds:
+        kafka-error-rate: 0.1
+        cpu-usage: 0.9
+        memory-usage: 0.9
+        
+    notification:
+      email:
+        enabled: false  # 开发环境关闭邮件通知
+      webhook:
+        enabled: false  # 开发环境关闭Webhook通知
+
+# 生产环境特定配置
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+      
+logging:
+  level:
+    root: WARN
+    example.d2k.monitoring: INFO
+    
+app:
+  monitoring:
+    metrics:
+      collection-interval: 30  # 生产环境更频繁的指标收集
+      retention-hours: 168     # 保留7天数据
+      
+    alert:
+      enabled: true
+      check-interval: 15  # 更频繁的告警检查
+      
+    notification:
+      email:
+        enabled: true
+      webhook:
+        enabled: true
+        
+    storage:
+      database:
+        batch-size: 500  # 生产环境更大的批次
+        flush-interval: 30
+        
+    report:
+      enabled: true
+      distribution:
+        email:
+          enabled: true

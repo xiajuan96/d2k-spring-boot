@@ -1,0 +1,234 @@
+# 消息幂等性处理示例配置
+spring:
+  application:
+    name: idempotent-message-example
+  
+  # H2内存数据库配置
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  
+  # JPA配置
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+  
+  # H2控制台配置
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+      settings:
+        web-allow-others: true
+  
+  # Redis配置
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 0
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms
+
+# 服务器配置
+server:
+  port: 8084
+  servlet:
+    context-path: /
+
+# D2K配置
+d2k:
+  # 生产者配置
+  producer:
+    bootstrap-servers: localhost:9092
+    key-serializer: org.apache.kafka.common.serialization.StringSerializer
+    value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    # 性能优化配置
+    acks: all
+    retries: 3
+    batch-size: 16384
+    linger-ms: 5
+    buffer-memory: 33554432
+    # 幂等性配置
+    enable-idempotence: true
+    max-in-flight-requests-per-connection: 5
+  
+  # 消费者配置
+  consumer:
+    bootstrap-servers: localhost:9092
+    key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    group-id: idempotent-message-group
+    client-id: idempotent-message-client
+    # 性能优化配置
+    auto-offset-reset: earliest
+    enable-auto-commit: false
+    max-poll-records: 100
+    max-poll-interval-ms: 300000
+    session-timeout-ms: 30000
+    heartbeat-interval-ms: 3000
+    fetch-min-bytes: 1
+    fetch-max-wait-ms: 500
+    # 并发配置
+    concurrency: 3
+    # 异步处理配置
+    async:
+      enabled: true
+      core-pool-size: 5
+      max-pool-size: 10
+      queue-capacity: 100
+    # 重试配置
+    retry:
+      enabled: true
+      max-attempts: 3
+      backoff:
+        delay: 1000
+        multiplier: 2.0
+        max-delay: 10000
+
+# 管理端点配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+  info:
+    env:
+      enabled: true
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    example.d2k.idempotent.message: DEBUG
+    org.springframework.kafka: INFO
+    org.apache.kafka: WARN
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%logger{36}] - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%logger{36}] - %msg%n"
+  file:
+    name: logs/idempotent-message-example.log
+    max-size: 100MB
+    max-history: 30
+
+# 自定义配置
+app:
+  # 消息幂等性配置
+  message:
+    idempotent:
+      # 缓存配置
+      cache:
+        enabled: true
+        ttl: 3600 # 缓存过期时间(秒)
+        prefix: "msg:idempotent:" # 缓存key前缀
+      
+      # 重试配置
+      retry:
+        enabled: true
+        max-attempts: 5 # 最大重试次数
+        initial-interval: 1000 # 初始重试间隔(毫秒)
+        multiplier: 2.0 # 重试间隔倍数
+        max-interval: 30000 # 最大重试间隔(毫秒)
+        random-factor: 0.1 # 随机因子
+      
+      # 超时配置
+      timeout:
+        enabled: true
+        default-timeout: 300000 # 默认超时时间(毫秒)
+        check-interval: 60000 # 超时检查间隔(毫秒)
+      
+      # 清理配置
+      cleanup:
+        enabled: true
+        retention-days: 7 # 消息保留天数
+        cleanup-interval: 3600000 # 清理间隔(毫秒)
+        batch-size: 1000 # 批量清理大小
+      
+      # 归档配置
+      archive:
+        enabled: true
+        archive-days: 3 # 归档天数
+        archive-interval: 7200000 # 归档间隔(毫秒)
+        batch-size: 500 # 批量归档大小
+      
+      # 监控配置
+      monitoring:
+        enabled: true
+        metrics-interval: 30000 # 指标收集间隔(毫秒)
+        alert:
+          enabled: true
+          failure-rate-threshold: 0.1 # 失败率告警阈值
+          timeout-rate-threshold: 0.05 # 超时率告警阈值
+      
+      # 业务规则配置
+      business:
+        # 高优先级消息类型
+        high-priority-types:
+          - PAYMENT_SUCCESS
+          - ORDER_CREATED
+          - INVENTORY_RESERVED
+        
+        # 需要立即处理的消息类型
+        immediate-types:
+          - PAYMENT_SUCCESS
+          - SYSTEM_ALERT
+        
+        # 允许批量处理的消息类型
+        batch-allowed-types:
+          - USER_BEHAVIOR
+          - AUDIT_LOG
+          - NOTIFICATION
+        
+        # 消息类型特定配置
+        type-configs:
+          PAYMENT_SUCCESS:
+            max-retry: 10
+            timeout: 60000
+            priority: HIGH
+          ORDER_CREATED:
+            max-retry: 5
+            timeout: 120000
+            priority: HIGH
+          USER_REGISTRATION:
+            max-retry: 3
+            timeout: 180000
+            priority: NORMAL
+          NOTIFICATION:
+            max-retry: 2
+            timeout: 300000
+            priority: LOW
+      
+      # 通知配置
+      notification:
+        enabled: true
+        # 邮件通知
+        email:
+          enabled: false
+          recipients:
+            - admin@example.com
+          subject-prefix: "[消息幂等性告警]"
+        # 钉钉通知
+        dingtalk:
+          enabled: false
+          webhook-url: "https://oapi.dingtalk.com/robot/send?access_token=xxx"
+        # 企业微信通知
+        wechat:
+          enabled: false
+          webhook-url: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxx"

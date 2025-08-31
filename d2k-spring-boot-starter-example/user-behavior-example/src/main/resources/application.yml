@@ -1,0 +1,213 @@
+# 用户行为分析延迟处理示例配置
+spring:
+  application:
+    name: user-behavior-example
+  
+  # H2 内存数据库配置
+  datasource:
+    url: jdbc:h2:mem:user_behavior_db;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  
+  # JPA 配置
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+  
+  # H2 控制台配置
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+      settings:
+        web-allow-others: true
+  
+  # Redis 配置
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 0
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms
+
+# 服务器配置
+server:
+  port: 8083
+  servlet:
+    context-path: /user-behavior
+
+# D2K 配置
+d2k:
+  # 生产者配置
+  producer:
+    bootstrap-servers: localhost:9092
+    key-serializer: org.apache.kafka.common.serialization.StringSerializer
+    value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    # 性能优化配置
+    acks: 1
+    retries: 3
+    batch-size: 16384
+    linger-ms: 5
+    buffer-memory: 33554432
+    # 压缩配置
+    compression-type: snappy
+    # 幂等性配置
+    enable-idempotence: true
+    max-in-flight-requests-per-connection: 5
+  
+  # 消费者配置
+  consumer:
+    bootstrap-servers: localhost:9092
+    key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    # 消费者组配置
+    group-id: user-behavior-group
+    client-id: user-behavior-client
+    # 性能优化配置
+    auto-offset-reset: earliest
+    enable-auto-commit: false
+    fetch-min-bytes: 1
+    fetch-max-wait: 500
+    max-poll-records: 500
+    max-poll-interval: 300000
+    session-timeout: 30000
+    heartbeat-interval: 3000
+    # 并发配置
+    concurrency: 3
+    # 异步处理配置
+    async: true
+    async-timeout: 30000
+    # 重试配置
+    max-retry-attempts: 3
+    retry-interval: 1000
+
+# 管理端点配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+  info:
+    env:
+      enabled: true
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    example.d2k.user.behavior: DEBUG
+    org.springframework.data.jpa: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.apache.kafka: WARN
+    com.d2k: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/user-behavior-example.log
+    max-size: 100MB
+    max-history: 30
+
+# 自定义配置
+user-behavior:
+  # 延迟处理配置
+  delay:
+    # 默认延迟时间（分钟）
+    default-minutes: 5
+    # 最大延迟时间（分钟）
+    max-minutes: 60
+    # 延迟处理检查间隔（秒）
+    check-interval-seconds: 30
+  
+  # 重试配置
+  retry:
+    # 最大重试次数
+    max-attempts: 3
+    # 重试间隔（秒）
+    interval-seconds: 60
+    # 重试指数退避因子
+    backoff-multiplier: 2.0
+    # 最大重试间隔（秒）
+    max-interval-seconds: 300
+  
+  # 批量处理配置
+  batch:
+    # 批量处理大小
+    size: 100
+    # 批量处理间隔（秒）
+    interval-seconds: 60
+    # 批量处理超时时间（秒）
+    timeout-seconds: 300
+  
+  # 事件清理配置
+  cleanup:
+    # 已处理事件保留天数
+    processed-retention-days: 7
+    # 失败事件保留天数
+    failed-retention-days: 30
+    # 清理任务执行间隔（小时）
+    interval-hours: 24
+  
+  # 缓存配置
+  cache:
+    # 用户会话缓存过期时间（分钟）
+    user-session-expire-minutes: 30
+    # 统计数据缓存过期时间（分钟）
+    statistics-expire-minutes: 5
+    # 事件缓存过期时间（分钟）
+    event-expire-minutes: 10
+  
+  # 监控配置
+  monitoring:
+    # 是否启用性能监控
+    performance-enabled: true
+    # 是否启用事件统计
+    statistics-enabled: true
+    # 统计数据更新间隔（秒）
+    statistics-update-interval-seconds: 60
+  
+  # 业务规则配置
+  business:
+    # 高价值事件类型（需要特殊处理）
+    high-value-events:
+      - PURCHASE
+      - REGISTER
+      - LOGIN
+      - ADD_TO_CART
+    # 需要延迟处理的事件类型
+    delayed-events:
+      - USER_BEHAVIOR_ANALYSIS
+      - CONTENT_RECOMMENDATION
+      - PERFORMANCE_ANALYSIS
+    # 需要实时处理的事件类型
+    realtime-events:
+      - ERROR_OCCURRED
+      - SECURITY_EVENT
+      - SYSTEM_ALERT
+  
+  # 通知配置
+  notification:
+    # 是否启用失败通知
+    failure-enabled: true
+    # 失败通知阈值（连续失败次数）
+    failure-threshold: 5
+    # 是否启用性能告警
+    performance-alert-enabled: true
+    # 性能告警阈值（处理时间毫秒）
+    performance-threshold-ms: 5000
